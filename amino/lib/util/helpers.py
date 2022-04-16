@@ -1,24 +1,23 @@
-import base64
 import hmac
 import json
 import os
 
 from functools import reduce
-from base64 import b64decode
+from base64 import b64decode, b64encode
 from hashlib import sha1
 
 def generate_device_id() -> str:
     identifier = os.urandom(20)
-    key = bytes.fromhex("76b4a156aaccade137b8b1e77b435a81971fbd3e")
-    mac = hmac.new(key, b"\x32" + identifier, sha1)
-    return f"32{identifier.hex()}{mac.hexdigest()}".upper()
+    key = bytes.fromhex("02B258C63559D8804321C5D5065AF320358D366F")
+    mac = hmac.new(key, bytes.fromhex("42") + identifier, sha1)
+    return f"42{identifier.hex()}{mac.hexdigest()}".upper()
 
 def generate_signature(data) -> str:
     try: d = data.encode("utf-8")
     except Exception: d = data
 
-    mac = hmac.new(bytes.fromhex("fbf98eb3a07a9042ee5593b10ce9f3286a69d4e2"), d, sha1)
-    return base64.b64encode(bytes.fromhex("32") + mac.digest()).decode("utf-8")
+    mac = hmac.new(bytes.fromhex("F8E7A61AC3F725941E3AC7CAE2D688BE97F30B93"), d, sha1)
+    return b64encode(bytes.fromhex("42") + mac.digest()).decode("utf-8")
 
 def generate_device_info():
     return {
