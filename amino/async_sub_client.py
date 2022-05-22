@@ -8,6 +8,7 @@ from time import timezone
 from binascii import hexlify
 from typing import BinaryIO, Union
 from time import time as timestamp
+from json_minify import json_minify
 
 from . import async_client
 from .lib.util import exceptions, headers, device, objects
@@ -37,7 +38,7 @@ class AsyncSubClient(async_client.AsyncClient):
         self.comId = comId
         self.aminoId = aminoId
         self.profile: objects.UserProfile = profile
-        self.community: objects.Community
+        self.community: objects.Community = None
 
     def __await__(self):
         return self._init().__await__()
@@ -457,6 +458,25 @@ class AsyncSubClient(async_client.AsyncClient):
         async with self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/comment", headers=self.parse_headers(data=data), data=data) as response:
             if response.status != 200: return exceptions.CheckException(json.loads(await response.text()))
             else: return response.status
+    
+    async def send_active_obj(self, startTime: int = None, endTime: int = None, optInAdsFlags: int = 2147483647, tz: int = -timezone // 1000, timers: list = None, timestamp: int = int(timestamp() * 1000)):
+        data = {
+            "userActiveTimeChunkList": [{
+                "start": startTime,
+                "end": endTime
+            }],
+            "timestamp": timestamp,
+            "optInAdsFlags": optInAdsFlags,
+            "timezone": tz
+        }
+
+        if timers:
+            data["userActiveTimeChunkList"] = timers
+
+        data = json_minify(json.dumps(data))
+        async with self.session.post(f"{self.api}/x{self.comId}/s/community/stats/user-active-time", headers=self.parse_headers(data=data), data=data) as response:
+            if response.status != 200: return exceptions.CheckException(json.loads(await response.text()))
+            else: return response.status
 
     async def activity_status(self, status: str):
         if "on" in status.lower(): status = 1
@@ -511,7 +531,7 @@ class AsyncSubClient(async_client.AsyncClient):
 
         async with self.session.post(f"{self.api}/x{self.comId}/s/chat/thread", headers=self.parse_headers(data=data), data=data) as response:
             if response.status != 200: return exceptions.CheckException(json.loads(await response.text()))
-            else: return response.status
+            else: objects.Thread(json.loads(await response.text())["thread"]).Thread
 
     async def invite_to_chat(self, userId: Union[str, list], chatId: str):
         if isinstance(userId, str): userIds = [userId]
