@@ -1,12 +1,10 @@
-import hmac
 import json
 import base64
 
 from uuid import UUID
 from os import urandom
-from hashlib import sha1
 from time import timezone
-from typing import BinaryIO
+from typing import BinaryIO, Union
 from binascii import hexlify
 from time import time as timestamp
 from json_minify import json_minify
@@ -322,7 +320,7 @@ class SubClient(client.Client):
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
-    def like_blog(self, blogId: [str, list] = None, wikiId: str = None):
+    def like_blog(self, blogId: Union[str, list] = None, wikiId: str = None):
         """
         Like a Blog, Multiple Blogs or a Wiki.
 
@@ -460,9 +458,7 @@ class SubClient(client.Client):
             data["userActiveTimeChunkList"] = timers
 
         data = json_minify(json.dumps(data))
-        mac = hmac.new(bytes.fromhex("307c3c8cd389e69dc298d951341f88419a8377f4"), data.encode("utf-8"), sha1)
-        signature = base64.b64encode(bytes.fromhex("22") + mac.digest()).decode("utf-8")
-        response = self.session.post(f"{self.api}/x{self.comId}/s/community/stats/user-active-time", headers=headers.Headers(data=data, sig=signature, deviceId=self.device_id).headers, data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/community/stats/user-active-time", headers=self.parse_headers(data), data=data, proxies=self.proxies, verify=self.certificatePath)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -502,7 +498,7 @@ class SubClient(client.Client):
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
-    def start_chat(self, userId: [str, list], message: str, title: str = None, content: str = None, isGlobal: bool = False, publishToGlobal: bool = False):
+    def start_chat(self, userId: Union[str, list], message: str, title: str = None, content: str = None, isGlobal: bool = False, publishToGlobal: bool = False):
         if isinstance(userId, str): userIds = [userId]
         elif isinstance(userId, list): userIds = userId
         else: raise exceptions.WrongType(type(userId))
@@ -525,9 +521,9 @@ class SubClient(client.Client):
 
         response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
-        else: return response.status_code
+        else: return objects.Thread(json.loads(response.text)["thread"]).Thread
 
-    def invite_to_chat(self, userId: [str, list], chatId: str):
+    def invite_to_chat(self, userId: Union[str, list], chatId: str):
         if isinstance(userId, str): userIds = [userId]
         elif isinstance(userId, list): userIds = userId
         else: raise exceptions.WrongType(type(userId))
@@ -575,7 +571,7 @@ class SubClient(client.Client):
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
-    def follow(self, userId: [str, list]):
+    def follow(self, userId: Union[str, list]):
         """
         Follow an User or Multiple Users.
 
