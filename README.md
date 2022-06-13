@@ -23,7 +23,7 @@ Amino.py is a Python API for communicating with Amino's Servers while pretending
 #### How do I use this?
 Python 3.8 is the recommended version for Amino.py, only supports Python 3.x.
 
-To install Amino.py, run `python3 -m pip install amino.py`.
+To install Amino.py, run `python3 -m pip install amino.py` or `pip install amino.py`.
 - **NOTE:** MAKE SURE YOU TYPE `amino.py` **NOT** `amino` AS IT WILL INSTALL THE **WRONG** PACKAGE!
 
 
