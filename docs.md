@@ -60,7 +60,7 @@
 - `LEADERS: str =  "leaders"`
 - `CURATORS: str = "curators"`
 
-### LeadernoardTypes:
+### LeaderboardTypes:
 - `DAY: int =        1`
 - `WEEK: int =       2`
 - `REPUTATION: int = 3`
