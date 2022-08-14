@@ -7,7 +7,7 @@ from uuid import UUID
 from os import urandom
 from zipfile import ZipFile
 from time import timezone, sleep
-from typing import BinaryIO
+from typing import BinaryIO, Union
 from binascii import hexlify
 from time import time as timestamp
 from locale import getdefaultlocale as locale
@@ -694,7 +694,7 @@ class Client(Callbacks, SocketHandler):
         response = self.session.delete(f"{self.api}/g/s/chat/thread/{chatId}/member/{self.userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
         return exceptions.CheckException(json.loads(response.text)) if response.status_code != 200 else response.status_code
 
-    def start_chat(self, userId: [str, list], message: str, title: str = None, content: str = None, isGlobal: bool = False, publishToGlobal: bool = False):
+    def start_chat(self, userId: Union[str, list], message: str, title: str = None, content: str = None, isGlobal: bool = False, publishToGlobal: bool = False):
         """
         Start an Chat with an User or List of Users.
 
@@ -732,9 +732,9 @@ class Client(Callbacks, SocketHandler):
         data = json.dumps(data)
 
         response = self.session.post(f"{self.api}/g/s/chat/thread", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath)
-        return exceptions.CheckException(json.loads(response.text)) if response.status_code != 200 else response.status_code
+        return exceptions.CheckException(json.loads(response.text)) if response.status_code != 200 else objects.Thread(json.loads(response.text)["thread"]).Thread
 
-    def invite_to_chat(self, userId: [str, list], chatId: str):
+    def invite_to_chat(self, userId: Union[str, list], chatId: str):
         """
         Invite a User or List of Users to a Chat.
 
@@ -1321,7 +1321,7 @@ class Client(Callbacks, SocketHandler):
         response = self.session.post(url, headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
         return exceptions.CheckException(json.loads(response.text)) if response.status_code != 200 else response.status_code
 
-    def follow(self, userId: [str, list]):
+    def follow(self, userId: Union[str, list]):
         """
         Follow an User or Multiple Users.
 
@@ -1695,7 +1695,7 @@ class Client(Callbacks, SocketHandler):
 
         return exceptions.CheckException(json.loads(response.text)) if response.status_code != 200 else response.status_code
 
-    def like_blog(self, blogId: [str, list] = None, wikiId: str = None):
+    def like_blog(self, blogId: Union[str, list] = None, wikiId: str = None):
         """
         Like a Blog, Multiple Blogs or a Wiki.
 

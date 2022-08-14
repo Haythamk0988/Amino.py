@@ -702,7 +702,7 @@ class AsyncClient(AsyncCallbacks, AsyncSocketHandler):
 
         async with self.session.post(f"{self.api}/g/s/chat/thread", headers=self.parse_headers(data=data), data=data) as response:
             if response.status != 200: return exceptions.CheckException(json.loads(await response.text()))
-            else: return response.status
+            else: return objects.Thread(json.loads(await response.text())["thread"]).Thread
 
     async def invite_to_chat(self, userId: Union[str, list], chatId: str):
         """
