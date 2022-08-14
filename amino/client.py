@@ -1,12 +1,11 @@
 import json
 import base64
-from zipfile import ZipFile
-
 import requests
 import threading
 
 from uuid import UUID
 from os import urandom
+from zipfile import ZipFile
 from time import timezone, sleep
 from typing import BinaryIO
 from binascii import hexlify
@@ -19,7 +18,7 @@ from .socket import Callbacks, SocketHandler
 device = device.DeviceGenerator()
 
 class Client(Callbacks, SocketHandler):
-    def __init__(self, deviceId: str = None, proxies: dict = None, certificatePath = None, socket_trace = False, socketDebugging = False):
+    def __init__(self, deviceId: str = None, proxies: dict = None, certificatePath = None, socket_trace = False, socketDebugging = False, autoChangeDev = False):
         self.api = "https://service.narvii.com/api/v1"
         self.authenticated = False
         self.configured = False
@@ -33,18 +32,20 @@ class Client(Callbacks, SocketHandler):
         Callbacks.__init__(self, self)
         self.proxies = proxies
         self.certificatePath = certificatePath
+        self.autoChangeDev = autoChangeDev
 
         self.json = None
         self.sid = None
         self.userId = None
+        self.secret = None
         self.account: objects.UserProfile = objects.UserProfile(None)
         self.profile: objects.UserProfile = objects.UserProfile(None)
 
     def parse_headers(self, data = None):
         if data:
-            return headers.Headers(data=data, deviceId=self.device_id).headers
+            return headers.Headers(data=data, deviceId=self.device_id, autoChangeDev=self.autoChangeDev).headers
         else:
-            return headers.Headers(deviceId=self.device_id).headers
+            return headers.Headers(deviceId=self.device_id, autoChangeDev=self.autoChangeDev).headers
 
     def join_voice_chat(self, comId: str, chatId: str, joinType: int = 1):
         """
@@ -226,13 +227,14 @@ class Client(Callbacks, SocketHandler):
         headers.sid = self.sid
         self.run_amino_socket()
 
-    def login(self, email: str, password: str):
+    def login(self, email: str = None, password: str = None, secret: str = None):
         """
         Login into an account.
 
         **Parameters**
             - **email** : Email of the account.
             - **password** : Password of the account.
+            - **secret** : Secret of the account.
 
         **Returns**
             - **Success** : 200 (int)
@@ -242,7 +244,7 @@ class Client(Callbacks, SocketHandler):
         data = json.dumps({
             "email": email,
             "v": 2,
-            "secret": f"0 {password}",
+            "secret": f"0 {password}" if secret is None else secret,
             "deviceID": self.device_id,
             "clientType": 100,
             "action": "normal",
@@ -258,6 +260,7 @@ class Client(Callbacks, SocketHandler):
             self.json = json.loads(response.text)
             self.sid = self.json["sid"]
             self.userId = self.json["account"]["uid"]
+            self.secret = self.json["secret"] if secret is not None else None
             self.account: objects.UserProfile = objects.UserProfile(self.json["account"]).UserProfile
             self.profile: objects.UserProfile = objects.UserProfile(self.json["userProfile"]).UserProfile
             headers.sid = self.sid
@@ -1240,7 +1243,7 @@ class Client(Callbacks, SocketHandler):
             else: res.append(response.status_code)
 
         if viewOnly is not None:
-            #fixed by Minori#6457
+            # fixed by Minori#6457
             if viewOnly:
                 response = self.session.post(f"{self.api}/g/s/chat/thread/{chatId}/view-only/enable", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
                 if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))

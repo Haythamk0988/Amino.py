@@ -35,7 +35,7 @@ class VCHeaders:
 
 
 class SubClient(client.Client):
-    def __init__(self, comId: str = None, aminoId: str = None, *, profile: objects.UserProfile):
+    def __init__(self, comId: str = None, aminoId: str = None, autoChangeDev: bool = False, *, profile: objects.UserProfile):
         client.Client.__init__(self)
         self.vc_connect = False
 
@@ -49,16 +49,17 @@ class SubClient(client.Client):
 
         if comId is None and aminoId is None: raise exceptions.NoCommunity()
 
+        self.autoChangeDev = autoChangeDev
+
         try: self.profile: objects.UserProfile = self.get_user_info(userId=profile.userId)
         except AttributeError: raise exceptions.FailedLogin()
         except exceptions.UserUnavailable: pass
 
     def parse_headers(self, data = None):
         if data:
-            return headers.Headers(data=data, deviceId=self.device_id).headers
+            return headers.Headers(data=data, deviceId=self.device_id, autoChangeDev=self.autoChangeDev).headers
         else:
-            return headers.Headers(deviceId=self.device_id).headers
-
+            return headers.Headers(deviceId=self.device_id, autoChangeDev=self.autoChangeDev).headers
 
     def get_invite_codes(self, status: str = "normal", start: int = 0, size: int = 25):
         response = self.session.get(f"{self.api}/g/s-x{self.comId}/community/invitation?status={status}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
@@ -81,7 +82,7 @@ class SubClient(client.Client):
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
-    def post_blog(self, title: str, content: str, imageList: list = None, captionList: list = None, categoriesList: list = None, backgroundColor: str = None, fansOnly: bool = False, extensions: dict = None, crash: bool = False):
+    def post_blog(self, title: str, content: str, imageList: list = None, captionList: list = None, categoriesList: list = None, backgroundColor: str = None, fansOnly: bool = False, extensions: dict = None):
         mediaList = []
 
         if captionList is not None:
@@ -445,13 +446,13 @@ class SubClient(client.Client):
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
-    def send_active_obj(self, startTime: int = None, endTime: int = None, optInAdsFlags: int = 2147483647, tz: int = -timezone // 1000, timers: list = None, timestamp: int = int(timestamp() * 1000)):
+    def send_active_obj(self, startTime: int = None, endTime: int = None, optInAdsFlags: int = 2147483647, tz: int = -timezone // 1000, timers: list = None, ts: int = int(timestamp() * 1000)):
         data = {
             "userActiveTimeChunkList": [{
                 "start": startTime,
                 "end": endTime
             }],
-            "timestamp": timestamp,
+            "timestamp": ts,
             "optInAdsFlags": optInAdsFlags,
             "timezone": tz
         }
@@ -459,10 +460,8 @@ class SubClient(client.Client):
         if timers:
             data["userActiveTimeChunkList"] = timers
 
-        data = json_minify(json.dumps(data))
-        mac = hmac.new(bytes.fromhex("307c3c8cd389e69dc298d951341f88419a8377f4"), data.encode("utf-8"), sha1)
-        signature = base64.b64encode(bytes.fromhex("22") + mac.digest()).decode("utf-8")
-        response = self.session.post(f"{self.api}/x{self.comId}/s/community/stats/user-active-time", headers=headers.Headers(data=data, sig=signature, deviceId=self.device_id).headers, data=data, proxies=self.proxies, verify=self.certificatePath)
+        data = json.dumps(data)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/community/stats/user-active-time", headers=headers.Headers(data=data, deviceId=self.device_id).headers, data=data, proxies=self.proxies, verify=self.certificatePath)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -478,12 +477,6 @@ class SubClient(client.Client):
         })
 
         response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{self.profile.userId}/online-status", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
-        if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
-        else: return response.status_code
-
-    # TODO : Finish this
-    def watch_ad(self):
-        response = self.session.post(f"{self.api}/g/s/wallet/ads/video/start", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -938,7 +931,7 @@ class SubClient(client.Client):
             else: res.append(response.status_code)
 
         if viewOnly is not None:
-            #fixed by Minori#6457
+            # fixed by Minori#6457
             if viewOnly:
                 response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/view-only/enable", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
                 if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
@@ -1464,7 +1457,7 @@ class SubClient(client.Client):
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.BlogCategoryList(json.loads(response.text)["blogCategoryList"]).BlogCategoryList
 
-    def get_blogs_by_category(self, categoryId: str,start: int = 0, size: int = 25):
+    def get_blogs_by_category(self, categoryId: str, start: int = 0, size: int = 25):
         response = self.session.get(f"{self.api}/x{self.comId}/s/blog-category/{categoryId}/blog-list?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.BlogList(json.loads(response.text)["blogList"]).BlogList
@@ -2004,12 +1997,12 @@ class SubClient(client.Client):
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
-    def create_shared_folder(self,title: str):
+    def create_shared_folder(self, title: str):
         data = json.dumps({
-                "title":title,
-                "timestamp":int(timestamp() * 1000)
+                "title": title,
+                "timestamp": int(timestamp() * 1000)
             })
-        response = self.session.post(f"{self.api}/x{self.comId}/s/shared-folder/folders", headers=self.parse_headers(data=data),data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/shared-folder/folders", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 

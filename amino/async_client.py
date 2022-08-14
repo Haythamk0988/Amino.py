@@ -30,6 +30,7 @@ class AsyncClient(AsyncCallbacks, AsyncSocketHandler):
         self.json = None
         self.sid = None
         self.userId = None
+        self.secret = None
         self.account: objects.UserProfile = objects.UserProfile(None)
         self.profile: objects.UserProfile = objects.UserProfile(None)
         self.session = aiohttp.ClientSession()
@@ -183,13 +184,14 @@ class AsyncClient(AsyncCallbacks, AsyncSocketHandler):
         headers.sid = self.sid
         await self.startup()
 
-    async def login(self, email: str, password: str):
+    async def login(self, email: str, password: str, secret: str = None):
         """
         Login into an account.
 
         **Parameters**
             - **email** : Email of the account.
             - **password** : Password of the account.
+            - **secret** : Secret of the account.
 
         **Returns**
             - **Success** : 200 (int)
@@ -199,7 +201,7 @@ class AsyncClient(AsyncCallbacks, AsyncSocketHandler):
         data = json.dumps({
             "email": email,
             "v": 2,
-            "secret": f"0 {password}",
+            "secret": f"0 {password}" if secret is None else secret,
             "deviceID": self.device_id,
             "clientType": 100,
             "action": "normal",
@@ -213,6 +215,7 @@ class AsyncClient(AsyncCallbacks, AsyncSocketHandler):
                 self.json = json.loads(await response.text())
                 self.sid = self.json["sid"]
                 self.userId = self.json["account"]["uid"]
+                self.secret = self.json["secret"]
                 self.account: objects.UserProfile = objects.UserProfile(self.json["account"]).UserProfile
                 self.profile: objects.UserProfile = objects.UserProfile(self.json["userProfile"]).UserProfile
                 headers.sid = self.sid

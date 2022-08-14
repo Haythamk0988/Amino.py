@@ -5,14 +5,14 @@ sid = None
 
 
 class Headers:
-    def __init__(self, data = None, type = None, deviceId: str = None, sig: str = None):
+    def __init__(self, data = None, type = None, deviceId: str = None, sig: str = None, autoChangeDev: bool = False):
         if deviceId:
             dev = device.DeviceGenerator(deviceId=deviceId)
         else:
             dev = device.DeviceGenerator()
 
         headers = {
-            "NDCDEVICEID": dev.device_id,
+            "NDCDEVICEID": helpers.generate_device_id() if autoChangeDev is True else dev.device_id,
             "Accept-Language": "en-US",
             "Content-Type": "application/json; charset=utf-8",
             "User-Agent": dev.user_agent,
