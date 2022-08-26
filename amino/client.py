@@ -2146,3 +2146,17 @@ class Client(Callbacks, SocketHandler):
         response = self.session.post("https://ads.tapdaq.com/v4/analytics/reward", json=data, headers=headers.AdHeaders().headers, proxies=self.proxies)
         if response.status_code != 204: return exceptions.CheckException(response.status_code)
         else: return response.status_code
+
+    def subscribe_topic(self, comId: int, topic: int, type: int = 300, chatId: str = None):
+        if topic == 0:
+            topic = "online-members"
+        elif topic == 1: topic = f"users-start-typing-at"
+        elif topic == 2: topic = f"users-end-typing-at"
+        elif topic == 3: topic = f"start-recording-at"
+        elif topic == 4: topic = f"users-end-recording-at"
+        if chatId:
+            topic = f"{topic}:{chatId}"
+        return self.send(json.dumps(
+            {"t": type, "o": {"id": int(timestamp() * 1000),
+            **{"topic": f"ndtopic:x{comId}:{topic}", "ndcId": comId}}})
+            )
