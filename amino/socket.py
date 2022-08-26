@@ -142,9 +142,8 @@ class Callbacks:
         self.handlers = {}
 
         self.methods = {
-            304: self._resolve_chat_action_start,
-            306: self._resolve_chat_action_end,
-            1000: self._resolve_chat_message
+            1000: self._resolve_chat_message,
+            400: self._resolve_topic
         }
 
         self.chat_methods = {
@@ -197,26 +196,22 @@ class Callbacks:
             "65282:0": self.on_welcome_message,
             "65283:0": self.on_invite_message
         }
-
-        self.chat_actions_start = {
-            "Typing": self.on_user_typing_start,
-        }
-
-        self.chat_actions_end = {
-            "Typing": self.on_user_typing_end,
+        
+        self.subscribe_to_topic = {
+            "online-members": self.on_live_user_update,
+            "users-start-typing-at": self.on_user_typing_start,
+            "users-end-typing-at": self.on_user_typing_end,
+            "start-recording-at": self.on_voice_chat_start,
+            "users-end-recording-at": self.on_voice_chat_end
         }
 
     def _resolve_chat_message(self, data):
         key = f"{data['o']['chatMessage']['type']}:{data['o']['chatMessage'].get('mediaType', 0)}"
         return self.chat_methods.get(key, self.default)(data)
-
-    def _resolve_chat_action_start(self, data):
-        key = data['o'].get('actions', 0)
-        return self.chat_actions_start.get(key, self.default)(data)
-
-    def _resolve_chat_action_end(self, data):
-        key = data['o'].get('actions', 0)
-        return self.chat_actions_end.get(key, self.default)(data)
+    
+    def _resolve_topic(self, data):
+        key = str(data['o'].get('topic', 0)).split(":")[2]
+        if key in self.subscribe_to_topic: return self.subscribe_to_topic.get(key)(data)
 
     def resolve(self, data):
         data = json.loads(data)
@@ -288,5 +283,5 @@ class Callbacks:
 
     def on_user_typing_start(self, data): self.call(getframe(0).f_code.co_name, objects.Event(data["o"]).Event)
     def on_user_typing_end(self, data): self.call(getframe(0).f_code.co_name, objects.Event(data["o"]).Event)
-
+    def on_live_user_update(self, data): self.call(getframe(0).f_code.co_name, objects.Event(data["o"]).Event)
     def default(self, data): self.call(getframe(0).f_code.co_name, data)
