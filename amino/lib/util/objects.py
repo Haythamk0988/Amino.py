@@ -3385,7 +3385,9 @@ class Event:
 
         try: self.message: Message = Message(data["chatMessage"]).Message
         except (KeyError, TypeError): self.message: Message = Message([])
-
+                
+        try: self.userProfile = UserProfile(data["userProfileList"][0]).UserProfile
+        except (KeyError, TypeError): self.userProfile = UserProfile([])
     @property
     def Event(self):
         try: self.comId = self.json["ndcId"]
