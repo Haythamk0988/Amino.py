@@ -143,7 +143,8 @@ class Callbacks:
 
         self.methods = {
             1000: self._resolve_chat_message,
-            400: self._resolve_topic
+            400: self._resolve_topic,
+            201: self._resolve_channel
         }
 
         self.chat_methods = {
@@ -204,11 +205,18 @@ class Callbacks:
             "start-recording-at": self.on_voice_chat_start,
             "users-end-recording-at": self.on_voice_chat_end
         }
-
+        
+        self.channel_methods = {
+            "fetch-channel": self.on_fetch_channel
+        }
+        
     def _resolve_chat_message(self, data):
         key = f"{data['o']['chatMessage']['type']}:{data['o']['chatMessage'].get('mediaType', 0)}"
         return self.chat_methods.get(key, self.default)(data)
     
+    def _resolve_channel(self, data):
+        if 'channelKey' in data['o']: return self.channel_methods.get("fetch-channel")(data)
+        
     def _resolve_topic(self, data):
         key = str(data['o'].get('topic', 0)).split(":")[2]
         if key in self.subscribe_to_topic: return self.subscribe_to_topic.get(key)(data)
@@ -284,4 +292,5 @@ class Callbacks:
     def on_user_typing_start(self, data): self.call(getframe(0).f_code.co_name, objects.Event(data["o"]).Event)
     def on_user_typing_end(self, data): self.call(getframe(0).f_code.co_name, objects.Event(data["o"]).Event)
     def on_live_user_update(self, data): self.call(getframe(0).f_code.co_name, objects.Event(data["o"]).Event)
+    def on_fetch_channel(self, data): self.call(getframe(0).f_code.co_name, objects.Event(data["o"]).Event)
     def default(self, data): self.call(getframe(0).f_code.co_name, data)
