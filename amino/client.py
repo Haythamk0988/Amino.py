@@ -2147,16 +2147,26 @@ class Client(Callbacks, SocketHandler):
         if response.status_code != 204: return exceptions.CheckException(response.status_code)
         else: return response.status_code
 
-    def subscribe_topic(self, comId: int, topic: int, type: int = 300, chatId: str = None):
-        if topic == 0:
-            topic = "online-members"
-        elif topic == 1: topic = f"users-start-typing-at"
-        elif topic == 2: topic = f"users-end-typing-at"
-        elif topic == 3: topic = f"start-recording-at"
-        elif topic == 4: topic = f"users-end-recording-at"
-        if chatId:
-            topic = f"{topic}:{chatId}"
-        return self.send(json.dumps(
-            {"t": type, "o": {"id": int(timestamp() * 1000),
-            **{"topic": f"ndtopic:x{comId}:{topic}", "ndcId": comId}}})
-            )
+    def subscribe_topic(self, comId: int, topic: int, t: int = 300, chatId: str = None):
+        # Store this in a specific class
+        topics = {
+            0: "online-members",
+            1: "users-start-typing-at",
+            2: "users-end-typing-at",
+            3: "start-recording-at",
+            4: "users-end-recording-at"
+        }
+
+        if chatId: 
+            topic = f"{topics.get(topic)}:{chatId}"
+
+        data = json.dumps({
+            "t": t,
+            "o": {
+                "id": int(timestamp() * 1000), 
+                "topic": f"ndtopic:x{comId}:{topic}",
+                "ndcId": comId
+            }
+        })
+
+        return self.send(data)
