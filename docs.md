@@ -176,3 +176,8 @@
 - `TIMESTAMP: int =                           65281`
 - `WELCOME_MESSAGE: int =                     65282`
 - `INVITE_MESSAGE: int =                      65283`
+
+
+
+![FTW_fufaUAI3qE1](https://user-images.githubusercontent.com/61352968/196932779-6e4d3e7e-76d7-4cf8-9e58-79711bb8a53a.jpg)
+
