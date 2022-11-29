@@ -16,7 +16,7 @@ class Headers:
             "Accept-Language": "en-US",
             "Content-Type": "application/json; charset=utf-8",
             "User-Agent": dev.user_agent,
-            "Host": "service.narvii.com",
+            "Host": "service.aminoapps.com",
             "Accept-Encoding": "gzip",
             "Connection": "Keep-Alive"
         }
