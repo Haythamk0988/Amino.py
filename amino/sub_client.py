@@ -444,7 +444,7 @@ class SubClient(client.Client):
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
-    def send_active_obj(self, startTime: int = None, endTime: int = None, optInAdsFlags: int = 2147483647, tz: int = -timezone // 1000, timers: list = None, ts: int = int(timestamp() * 1000)):
+    def send_active_obj(self, startTime: int = None, endTime: int = None, optInAdsFlags: int = 27, tz: int = -timezone // 1000, timers: list = None, ts: int = int(timestamp() * 1000)):
         data = {
             "userActiveTimeChunkList": [{
                 "start": startTime,
@@ -452,7 +452,8 @@ class SubClient(client.Client):
             }],
             "timestamp": ts,
             "optInAdsFlags": optInAdsFlags,
-            "timezone": tz
+            "timezone": tz,
+            "uid": self.profile.userId
         }
 
         if timers:

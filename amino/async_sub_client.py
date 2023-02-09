@@ -458,7 +458,7 @@ class AsyncSubClient(async_client.AsyncClient):
             if response.status != 200: return exceptions.CheckException(json.loads(await response.text()))
             else: return response.status
     
-    async def send_active_obj(self, startTime: int = None, endTime: int = None, optInAdsFlags: int = 2147483647, tz: int = -timezone // 1000, timers: list = None, timestamp: int = int(timestamp() * 1000)):
+    async def send_active_obj(self, startTime: int = None, endTime: int = None, optInAdsFlags: int = 27, tz: int = -timezone // 1000, timers: list = None, timestamp: int = int(timestamp() * 1000)):
         data = {
             "userActiveTimeChunkList": [{
                 "start": startTime,
@@ -466,7 +466,8 @@ class AsyncSubClient(async_client.AsyncClient):
             }],
             "timestamp": timestamp,
             "optInAdsFlags": optInAdsFlags,
-            "timezone": tz
+            "timezone": tz,
+            "uid": self.profile.userId
         }
 
         if timers:

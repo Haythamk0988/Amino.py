@@ -5,7 +5,7 @@ with open("README.md", "r") as stream:
 
 setup(
     name = "Amino.py",
-    version = "3.0.9",
+    version = "3.0.10",
     url = "https://github.com/Slimakoi/Amino.py",
     download_url = "https://github.com/Slimakoi/Amino.py/tarball/master",
     license = "MIT",
