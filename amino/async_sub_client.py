@@ -8,7 +8,6 @@ from time import timezone
 from binascii import hexlify
 from typing import BinaryIO, Union
 from time import time as timestamp
-from json_minify import json_minify
 
 from . import async_client
 from .lib.util import exceptions, headers, device, objects
@@ -473,7 +472,7 @@ class AsyncSubClient(async_client.AsyncClient):
         if timers:
             data["userActiveTimeChunkList"] = timers
 
-        data = json_minify(json.dumps(data))
+        data = json.dumps(data)
         async with self.session.post(f"{self.api}/x{self.comId}/s/community/stats/user-active-time", headers=self.parse_headers(data=data), data=data) as response:
             if response.status != 200: return exceptions.CheckException(json.loads(await response.text()))
             else: return response.status

@@ -21,7 +21,7 @@ def generate_signature(data) -> str:
 def generate_device_info():
     return {
         "device_id": generate_device_id(),
-        "user_agent": "Dalvik/2.1.0 (Linux; U; Android 7.1.2; SM-G965N Build/star2ltexx-user 7.1.; com.narvii.amino.master/3.4.33602"
+        "user_agent": "Apple iPhone13,4 iOS v15.6.1 Main/3.12.9"
     }
 
 # okok says: please use return annotations :(( https://www.python.org/dev/peps/pep-3107/#return-values

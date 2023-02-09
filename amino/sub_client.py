@@ -4,12 +4,10 @@ import base64
 
 from uuid import UUID
 from os import urandom
-from hashlib import sha1
 from time import timezone
 from typing import BinaryIO
 from binascii import hexlify
 from time import time as timestamp
-from json_minify import json_minify
 
 from . import client
 from .lib.util import exceptions, headers, device, objects
