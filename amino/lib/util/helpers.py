@@ -7,21 +7,21 @@ from hashlib import sha1
 
 def generate_device_id() -> str:
     identifier = os.urandom(20)
-    key = bytes.fromhex("AE49550458D8E7C51D566916B04888BFB8B3CA7D")
-    mac = hmac.new(key, bytes.fromhex("52") + identifier, sha1)
-    return f"52{identifier.hex()}{mac.hexdigest()}".upper()
+    key = bytes.fromhex("E7309ECC0953C6FA60005B2765F99DBBC965C8E9")
+    mac = hmac.new(key, bytes.fromhex("19") + identifier, sha1)
+    return f"19{identifier.hex()}{mac.hexdigest()}".upper()
 
 def generate_signature(data) -> str:
     try: d = data.encode("utf-8")
     except Exception: d = data
 
-    mac = hmac.new(bytes.fromhex("EAB4F1B9E3340CD1631EDE3B587CC3EBEDF1AFA9"), d, sha1)
-    return b64encode(bytes.fromhex("52") + mac.digest()).decode("utf-8")
+    mac = hmac.new(bytes.fromhex("DFA5ED192DDA6E88A12FE12130DC6206B1251E44"), d, sha1)
+    return b64encode(bytes.fromhex("19") + mac.digest()).decode("utf-8")
 
 def generate_device_info():
     return {
         "device_id": generate_device_id(),
-        "user_agent": "Dalvik/2.1.0 (Linux; U; Android 7.1.2; SM-G965N Build/star2ltexx-user 7.1.; com.narvii.amino.master/3.4.33602"
+        "user_agent": "Apple iPhone13,4 iOS v15.6.1 Main/3.12.9"
     }
 
 # okok says: please use return annotations :(( https://www.python.org/dev/peps/pep-3107/#return-values
