@@ -1,7 +1,7 @@
 import hmac
 import json
 import base64
-
+from typing import Union
 from uuid import UUID
 from os import urandom
 from hashlib import sha1
@@ -35,7 +35,7 @@ class VCHeaders:
 
 
 class SubClient(client.Client):
-    def __init__(self, comId: str = None, aminoId: str = None, autoChangeDev: bool = False, *, profile: objects.UserProfile):
+    def __init__(self, comId: str = None, aminoId: str = None, autoChangeDev: bool = False, *, profile: objects.UserProfile, requestTimeout: int = 120):
         client.Client.__init__(self)
         self.vc_connect = False
 
@@ -50,6 +50,7 @@ class SubClient(client.Client):
         if comId is None and aminoId is None: raise exceptions.NoCommunity()
 
         self.autoChangeDev = autoChangeDev
+        self.requestTimeOut: int = requestTimeout
 
         try: self.profile: objects.UserProfile = self.get_user_info(userId=profile.userId)
         except AttributeError: raise exceptions.FailedLogin()
@@ -62,7 +63,7 @@ class SubClient(client.Client):
             return headers.Headers(deviceId=self.device_id, autoChangeDev=self.autoChangeDev).headers
 
     def get_invite_codes(self, status: str = "normal", start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/g/s-x{self.comId}/community/invitation?status={status}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/g/s-x{self.comId}/community/invitation?status={status}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.InviteCodeList(json.loads(response.text)["communityInvitationList"]).InviteCodeList
 
@@ -73,12 +74,12 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/g/s-x{self.comId}/community/invitation", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/g/s-x{self.comId}/community/invitation", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.InviteCode(json.loads(response.text)["communityInvitation"]).InviteCode
 
     def delete_invite_code(self, inviteId: str):
-        response = self.session.delete(f"{self.api}/g/s-x{self.comId}/community/invitation/{inviteId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.delete(f"{self.api}/g/s-x{self.comId}/community/invitation/{inviteId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -112,13 +113,13 @@ class SubClient(client.Client):
         if categoriesList: data["taggedBlogCategoryIdList"] = categoriesList
 
         data = json.dumps(data)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/blog", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/blog", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def post_blog_raw(self, raw):
         data = json.dumps(raw)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/blog", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/blog", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -141,7 +142,7 @@ class SubClient(client.Client):
         if fansOnly: data["extensions"] = {"fansOnly": fansOnly}
         if backgroundColor: data["extensions"] = {"style": {"backgroundColor": backgroundColor}}
         data = json.dumps(data)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/item", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/item", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -166,23 +167,23 @@ class SubClient(client.Client):
         if backgroundColor: data["extensions"] = {"style": {"backgroundColor": backgroundColor}}
         if categoriesList: data["taggedBlogCategoryIdList"] = categoriesList
         data = json.dumps(data)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def edit_blog_raw(self, blogId: str, raw):
         data = json.dumps(raw)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def delete_blog(self, blogId: str):
-        response = self.session.delete(f"{self.api}/x{self.comId}/s/blog/{blogId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.delete(f"{self.api}/x{self.comId}/s/blog/{blogId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def delete_wiki(self, wikiId: str):
-        response = self.session.delete(f"{self.api}/x{self.comId}/s/item/{wikiId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.delete(f"{self.api}/x{self.comId}/s/item/{wikiId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -199,7 +200,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/blog", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/blog", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -209,7 +210,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/check-in", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/check-in", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -219,7 +220,7 @@ class SubClient(client.Client):
         if method == 1: data["repairMethod"] = "2"  # Amino+
 
         data = json.dumps(data)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/check-in/repair", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/check-in/repair", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -229,7 +230,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/check-in/lottery", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/check-in/lottery", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.LotteryLog(json.loads(response.text)["lotteryLog"]).LotteryLog
 
@@ -267,7 +268,7 @@ class SubClient(client.Client):
             data["extensions"] = {"customTitles": tlt}
 
         data = json.dumps(data)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{self.profile.userId}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{self.profile.userId}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -278,7 +279,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/poll/option/{optionId}/vote", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/poll/option/{optionId}/vote", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -298,32 +299,32 @@ class SubClient(client.Client):
         if userId:
             data["eventSource"] = "UserProfileView"
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/{comType}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/{comType}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif blogId:
             data["eventSource"] = "PostDetailView"
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/{comType}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/{comType}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif wikiId:
             data["eventSource"] = "PostDetailView"
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/item/{wikiId}/{comType}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/item/{wikiId}/{comType}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         else: raise exceptions.SpecifyType()
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def delete_comment(self, commentId: str, userId: str = None, blogId: str = None, wikiId: str = None):
-        if userId: response = self.session.delete(f"{self.api}/x{self.comId}/s/user-profile/{userId}/comment/{commentId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif blogId: response = self.session.delete(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment/{commentId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif wikiId: response = self.session.delete(f"{self.api}/x{self.comId}/s/item/{wikiId}/comment/{commentId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        if userId: response = self.session.delete(f"{self.api}/x{self.comId}/s/user-profile/{userId}/comment/{commentId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif blogId: response = self.session.delete(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment/{commentId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif wikiId: response = self.session.delete(f"{self.api}/x{self.comId}/s/item/{wikiId}/comment/{commentId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         else: raise exceptions.SpecifyType()
 
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
-    def like_blog(self, blogId: [str, list] = None, wikiId: str = None):
+    def like_blog(self, blogId: Union[str, list] = None, wikiId: str = None):
         """
         Like a Blog, Multiple Blogs or a Wiki.
 
@@ -345,27 +346,27 @@ class SubClient(client.Client):
             if isinstance(blogId, str):
                 data["eventSource"] = "UserProfileView"
                 data = json.dumps(data)
-                response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/vote?cv=1.2", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+                response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/vote?cv=1.2", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
             elif isinstance(blogId, list):
                 data["targetIdList"] = blogId
                 data = json.dumps(data)
-                response = self.session.post(f"{self.api}/x{self.comId}/s/feed/vote", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+                response = self.session.post(f"{self.api}/x{self.comId}/s/feed/vote", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
             else: raise exceptions.WrongType
 
         elif wikiId:
             data["eventSource"] = "PostDetailView"
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self. comId}/s/item/{wikiId}/vote?cv=1.2", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self. comId}/s/item/{wikiId}/vote?cv=1.2", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         else: raise exceptions.SpecifyType()
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def unlike_blog(self, blogId: str = None, wikiId: str = None):
-        if blogId: response = self.session.delete(f"{self.api}/x{self.comId}/s/blog/{blogId}/vote?eventSource=UserProfileView", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif wikiId: response = self.session.delete(f"{self.api}/x{self.comId}/s/item/{wikiId}/vote?eventSource=PostDetailView", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        if blogId: response = self.session.delete(f"{self.api}/x{self.comId}/s/blog/{blogId}/vote?eventSource=UserProfileView", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif wikiId: response = self.session.delete(f"{self.api}/x{self.comId}/s/item/{wikiId}/vote?eventSource=PostDetailView", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         else: raise exceptions.SpecifyType()
 
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
@@ -380,26 +381,26 @@ class SubClient(client.Client):
         if userId:
             data["eventSource"] = "UserProfileView"
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/comment/{commentId}/vote?cv=1.2&value=1", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/comment/{commentId}/vote?cv=1.2&value=1", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif blogId:
             data["eventSource"] = "PostDetailView"
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment/{commentId}/vote?cv=1.2&value=1", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment/{commentId}/vote?cv=1.2&value=1", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif wikiId:
             data["eventSource"] = "PostDetailView"
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/item/{wikiId}/comment/{commentId}/g-vote?cv=1.2&value=1", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/item/{wikiId}/comment/{commentId}/g-vote?cv=1.2&value=1", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         else: raise exceptions.SpecifyType()
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def unlike_comment(self, commentId: str, userId: str = None, blogId: str = None, wikiId: str = None):
-        if userId: response = self.session.delete(f"{self.api}/x{self.comId}/s/user-profile/{userId}/comment/{commentId}/g-vote?eventSource=UserProfileView", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif blogId: response = self.session.delete(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment/{commentId}/g-vote?eventSource=PostDetailView", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif wikiId: response = self.session.delete(f"{self.api}/x{self.comId}/s/item/{wikiId}/comment/{commentId}/g-vote?eventSource=PostDetailView", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        if userId: response = self.session.delete(f"{self.api}/x{self.comId}/s/user-profile/{userId}/comment/{commentId}/g-vote?eventSource=UserProfileView", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif blogId: response = self.session.delete(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment/{commentId}/g-vote?eventSource=PostDetailView", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif wikiId: response = self.session.delete(f"{self.api}/x{self.comId}/s/item/{wikiId}/comment/{commentId}/g-vote?eventSource=PostDetailView", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         else: raise exceptions.SpecifyType()
 
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
@@ -412,7 +413,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment/{commentId}/vote?cv=1.2&value=1", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment/{commentId}/vote?cv=1.2&value=1", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -423,12 +424,12 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment/{commentId}/vote?cv=1.2&value=-1", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment/{commentId}/vote?cv=1.2&value=-1", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def unvote_comment(self, blogId: str, commentId: str):
-        response = self.session.delete(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment/{commentId}/vote?eventSource=PostDetailView", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.delete(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment/{commentId}/vote?eventSource=PostDetailView", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -442,7 +443,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/comment", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/comment", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -461,7 +462,7 @@ class SubClient(client.Client):
             data["userActiveTimeChunkList"] = timers
 
         data = json.dumps(data)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/community/stats/user-active-time", headers=headers.Headers(data=data, deviceId=self.device_id).headers, data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/community/stats/user-active-time", headers=headers.Headers(data=data, deviceId=self.device_id).headers, data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -476,26 +477,26 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{self.profile.userId}/online-status", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{self.profile.userId}/online-status", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def check_notifications(self):
-        response = self.session.post(f"{self.api}/x{self.comId}/s/notification/checked", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/notification/checked", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def delete_notification(self, notificationId: str):
-        response = self.session.delete(f"{self.api}/x{self.comId}/s/notification/{notificationId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.delete(f"{self.api}/x{self.comId}/s/notification/{notificationId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def clear_notifications(self):
-        response = self.session.delete(f"{self.api}/x{self.comId}/s/notification", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.delete(f"{self.api}/x{self.comId}/s/notification", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
-    def start_chat(self, userId: [str, list], message: str, title: str = None, content: str = None, isGlobal: bool = False, publishToGlobal: bool = False):
+    def start_chat(self, userId: Union[str, list], message: str, title: str = None, content: str = None, isGlobal: bool = False, publishToGlobal: bool = False):
         if isinstance(userId, str): userIds = [userId]
         elif isinstance(userId, list): userIds = userId
         else: raise exceptions.WrongType(type(userId))
@@ -516,11 +517,11 @@ class SubClient(client.Client):
 
         data = json.dumps(data)
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
-    def invite_to_chat(self, userId: [str, list], chatId: str):
+    def invite_to_chat(self, userId: Union[str, list], chatId: str):
         if isinstance(userId, str): userIds = [userId]
         elif isinstance(userId, list): userIds = userId
         else: raise exceptions.WrongType(type(userId))
@@ -530,12 +531,12 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/invite", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/invite", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def add_to_favorites(self, userId: str):
-        response = self.session.post(f"{self.api}/x{self.comId}/s/user-group/quick-access/{userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/user-group/quick-access/{userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -559,16 +560,16 @@ class SubClient(client.Client):
         if url is None: raise exceptions.SpecifyType()
 
         data = json.dumps(data)
-        response = self.session.post(url, headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(url, headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def thank_tip(self, chatId: str, userId: str):
-        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/tipping/tipped-users/{userId}/thank", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/tipping/tipped-users/{userId}/thank", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
-    def follow(self, userId: [str, list]):
+    def follow(self, userId: Union[str, list]):
         """
         Follow an User or Multiple Users.
 
@@ -581,11 +582,11 @@ class SubClient(client.Client):
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
         if isinstance(userId, str):
-            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/member", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/member", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif isinstance(userId, list):
             data = json.dumps({"targetUidList": userId, "timestamp": int(timestamp() * 1000)})
-            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{self.profile.userId}/joined", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{self.profile.userId}/joined", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         else: raise exceptions.WrongType(type(userId))
 
@@ -604,7 +605,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.delete(f"{self.api}/x{self.comId}/s/user-profile/{self.profile.userId}/joined/{userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.delete(f"{self.api}/x{self.comId}/s/user-profile/{self.profile.userId}/joined/{userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -620,7 +621,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.post(f"{self.api}/x{self.comId}/s/block/{userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/block/{userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -636,7 +637,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.delete(f"{self.api}/x{self.comId}/s/block/{userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.delete(f"{self.api}/x{self.comId}/s/block/{userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -652,7 +653,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}?action=visit", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}?action=visit", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -700,7 +701,7 @@ class SubClient(client.Client):
         else: flg = "flag"
 
         data = json.dumps(data)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/{flg}", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/{flg}", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -798,7 +799,7 @@ class SubClient(client.Client):
             data["mediaUploadValue"] = base64.b64encode(file.read()).decode()
 
         data = json.dumps(data)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/message", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/message", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -826,8 +827,8 @@ class SubClient(client.Client):
             data["adminOpNote"] = {"content": reason}
 
         data = json.dumps(data)
-        if not asStaff: response = self.session.delete(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/message/{messageId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        else: response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/message/{messageId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        if not asStaff: response = self.session.delete(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/message/{messageId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        else: response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/message/{messageId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -848,7 +849,7 @@ class SubClient(client.Client):
             "messageId": messageId,
             "timestamp": int(timestamp() * 1000)
         })
-        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/mark-as-read", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/mark-as-read", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -897,75 +898,75 @@ class SubClient(client.Client):
         if doNotDisturb is not None:
             if doNotDisturb:
                 data = json.dumps({"alertOption": 2, "timestamp": int(timestamp() * 1000)})
-                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/{self.profile.userId}/alert", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath)
+                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/{self.profile.userId}/alert", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
                 if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
                 else: res.append(response.status_code)
 
             if not doNotDisturb:
                 data = json.dumps({"alertOption": 1, "timestamp": int(timestamp() * 1000)})
-                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/{self.profile.userId}/alert", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath)
+                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/{self.profile.userId}/alert", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
                 if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
                 else: res.append(response.status_code)
 
         if pinChat is not None:
             if pinChat:
-                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/pin", data=data, headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/pin", data=data, headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
                 if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
                 else: res.append(response.status_code)
 
             if not pinChat:
-                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/unpin", data=data, headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/unpin", data=data, headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
                 if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
                 else: res.append(response.status_code)
 
         if backgroundImage is not None:
             data = json.dumps({"media": [100, backgroundImage, None], "timestamp": int(timestamp() * 1000)})
-            response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/{self.profile.userId}/background", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/{self.profile.userId}/background", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
             if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
             else: res.append(response.status_code)
 
         if coHosts is not None:
             data = json.dumps({"uidList": coHosts, "timestamp": int(timestamp() * 1000)})
-            response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/co-host", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/co-host", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
             if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
             else: res.append(response.status_code)
 
         if viewOnly is not None:
             # fixed by Minori#6457
             if viewOnly:
-                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/view-only/enable", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/view-only/enable", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
                 if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
                 else: res.append(response.status_code)
 
             if not viewOnly:
-                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/view-only/disable", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/view-only/disable", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
                 if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
                 else: res.append(response.status_code)
 
         if canInvite is not None:
             if canInvite:
-                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/members-can-invite/enable", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath)
+                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/members-can-invite/enable", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
                 if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
                 else: res.append(response.status_code)
 
             if not canInvite:
-                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/members-can-invite/disable", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath)
+                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/members-can-invite/disable", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
                 if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
                 else: res.append(response.status_code)
 
         if canTip is not None:
             if canTip:
-                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/tipping-perm-status/enable", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath)
+                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/tipping-perm-status/enable", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
                 if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
                 else: res.append(response.status_code)
 
             if not canTip:
-                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/tipping-perm-status/disable", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath)
+                response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/tipping-perm-status/disable", data=data, headers=self.parse_headers(data=data), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
                 if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
                 else: res.append(response.status_code)
 
         data = json.dumps(data)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: res.append(exceptions.CheckException(json.loads(response.text)))
         else: res.append(response.status_code)
 
@@ -977,7 +978,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/transfer-organizer", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/transfer-organizer", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -987,7 +988,7 @@ class SubClient(client.Client):
     def accept_host(self, chatId: str, requestId: str):
         data = json.dumps({})
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/transfer-organizer/{requestId}/accept", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/transfer-organizer/{requestId}/accept", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -997,7 +998,7 @@ class SubClient(client.Client):
     def kick(self, userId: str, chatId: str, allowRejoin: bool = True):
         if allowRejoin: allowRejoin = 1
         if not allowRejoin: allowRejoin = 0
-        response = self.session.delete(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/{userId}?allowRejoin={allowRejoin}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.delete(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/{userId}?allowRejoin={allowRejoin}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -1013,7 +1014,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/{self.profile.userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/{self.profile.userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -1029,7 +1030,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.delete(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/{self.profile.userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.delete(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member/{self.profile.userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
         
@@ -1045,7 +1046,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.delete(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.delete(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
         
@@ -1060,12 +1061,12 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/influencer/{userId}/subscribe", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/influencer/{userId}/subscribe", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def promotion(self, noticeId: str, type: str = "accept"):
-        response = self.session.post(f"{self.api}/x{self.comId}/s/notice/{noticeId}/{type}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/notice/{noticeId}/{type}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -1076,7 +1077,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{quizId}/quiz/result", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{quizId}/quiz/result", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -1098,7 +1099,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{quizId}/quiz/result", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{quizId}/quiz/result", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -1113,38 +1114,38 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/vvchat-permission", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/vvchat-permission", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def get_vc_reputation_info(self, chatId: str):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/avchat-reputation", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/avchat-reputation", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.VcReputation(json.loads(response.text)).VcReputation
 
     def claim_vc_reputation(self, chatId: str):
-        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/avchat-reputation", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/avchat-reputation", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.VcReputation(json.loads(response.text)).VcReputation
 
     def get_all_users(self, type: str = "recent", start: int = 0, size: int = 25):
-        if type == "recent": response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=recent&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif type == "banned": response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=banned&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif type == "featured": response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=featured&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif type == "leaders": response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=leaders&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif type == "curators": response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=curators&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        if type == "recent": response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=recent&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif type == "banned": response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=banned&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif type == "featured": response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=featured&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif type == "leaders": response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=leaders&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif type == "curators": response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=curators&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         else: raise exceptions.WrongType(type)
 
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserProfileCountList(json.loads(response.text)).UserProfileCountList
 
     def get_online_users(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/live-layer?topic=ndtopic:x{self.comId}:online-members&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/live-layer?topic=ndtopic:x{self.comId}:online-members&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserProfileCountList(json.loads(response.text)).UserProfileCountList
 
     def get_online_favorite_users(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/user-group/quick-access?type=online&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/user-group/quick-access?type=online&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserProfileCountList(json.loads(response.text)).UserProfileCountList
 
@@ -1160,7 +1161,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserProfile(json.loads(response.text)["userProfile"]).UserProfile
 
@@ -1178,7 +1179,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}/joined?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}/joined?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserProfileList(json.loads(response.text)["userProfileList"]).UserProfileList
 
@@ -1196,7 +1197,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}/member?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}/member?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserProfileList(json.loads(response.text)["userProfileList"]).UserProfileList
 
@@ -1214,32 +1215,32 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}/visitors?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}/visitors?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.VisitorsList(json.loads(response.text)).VisitorsList
 
     def get_user_checkins(self, userId: str):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/check-in/stats/{userId}?timezone={-timezone // 1000}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/check-in/stats/{userId}?timezone={-timezone // 1000}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserCheckIns(json.loads(response.text)).UserCheckIns
 
     def get_user_blogs(self, userId: str, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/blog?type=user&q={userId}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/blog?type=user&q={userId}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.BlogList(json.loads(response.text)["blogList"]).BlogList
 
     def get_user_wikis(self, userId: str, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/item?type=user-all&start={start}&size={size}&cv=1.2&uid={userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/item?type=user-all&start={start}&size={size}&cv=1.2&uid={userId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.WikiList(json.loads(response.text)["itemList"]).WikiList
 
     def get_user_achievements(self, userId: str):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}/achievements", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}/achievements", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserAchievements(json.loads(response.text)["achievements"]).UserAchievements
 
     def get_influencer_fans(self, userId: str, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/influencer/{userId}/fans?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/influencer/{userId}/fans?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.InfluencerFans(json.loads(response.text)).InfluencerFans
 
@@ -1256,7 +1257,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.get(f"{self.api}/x{self.comId}/s/block?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/block?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserProfileList(json.loads(response.text)["userProfileList"]).UserProfileList
 
@@ -1274,57 +1275,57 @@ class SubClient(client.Client):
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
 
-        response = self.session.get(f"{self.api}/x{self.comId}/s/block?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/block?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return json.loads(response.text)["blockerUidList"]
 
     def search_users(self, nickname: str, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=name&q={nickname}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=name&q={nickname}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserProfileList(json.loads(response.text)["userProfileList"]).UserProfileList
 
     def get_saved_blogs(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/bookmark?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/bookmark?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserSavedBlogs(json.loads(response.text)["bookmarkList"]).UserSavedBlogs
 
     def get_leaderboard_info(self, type: str, start: int = 0, size: int = 25):
-        if "24" in type or "hour" in type: response = self.session.get(f"{self.api}/g/s-x{self.comId}/community/leaderboard?rankingType=1&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif "7" in type or "day" in type: response = self.session.get(f"{self.api}/g/s-x{self.comId}/community/leaderboard?rankingType=2&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif "rep" in type: response = self.session.get(f"{self.api}/g/s-x{self.comId}/community/leaderboard?rankingType=3&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif "check" in type: response = self.session.get(f"{self.api}/g/s-x{self.comId}/community/leaderboard?rankingType=4", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif "quiz" in type: response = self.session.get(f"{self.api}/g/s-x{self.comId}/community/leaderboard?rankingType=5&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        if "24" in type or "hour" in type: response = self.session.get(f"{self.api}/g/s-x{self.comId}/community/leaderboard?rankingType=1&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif "7" in type or "day" in type: response = self.session.get(f"{self.api}/g/s-x{self.comId}/community/leaderboard?rankingType=2&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif "rep" in type: response = self.session.get(f"{self.api}/g/s-x{self.comId}/community/leaderboard?rankingType=3&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif "check" in type: response = self.session.get(f"{self.api}/g/s-x{self.comId}/community/leaderboard?rankingType=4", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif "quiz" in type: response = self.session.get(f"{self.api}/g/s-x{self.comId}/community/leaderboard?rankingType=5&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         else: raise exceptions.WrongType(type)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserProfileList(json.loads(response.text)["userProfileList"]).UserProfileList
 
     def get_wiki_info(self, wikiId: str):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/item/{wikiId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/item/{wikiId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.GetWikiInfo(json.loads(response.text)).GetWikiInfo
 
     def get_recent_wiki_items(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/item?type=catalog-all&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/item?type=catalog-all&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.WikiList(json.loads(response.text)["itemList"]).WikiList
 
     def get_wiki_categories(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/item-category?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/item-category?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.WikiCategoryList(json.loads(response.text)["itemCategoryList"]).WikiCategoryList
 
     def get_wiki_category(self, categoryId: str, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/item-category/{categoryId}?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/item-category/{categoryId}?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.WikiCategory(json.loads(response.text)).WikiCategory
 
     def get_tipped_users(self, blogId: str = None, wikiId: str = None, quizId: str = None, fileId: str = None, chatId: str = None, start: int = 0, size: int = 25):
         if blogId or quizId:
             if quizId is not None: blogId = quizId
-            response = self.session.get(f"{self.api}/x{self.comId}/s/blog/{blogId}/tipping/tipped-users-summary?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif wikiId: response = self.session.get(f"{self.api}/x{self.comId}/s/item/{wikiId}/tipping/tipped-users-summary?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif chatId: response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/tipping/tipped-users-summary?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif fileId: response = self.session.get(f"{self.api}/x{self.comId}/s/shared-folder/files/{fileId}/tipping/tipped-users-summary?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.get(f"{self.api}/x{self.comId}/s/blog/{blogId}/tipping/tipped-users-summary?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif wikiId: response = self.session.get(f"{self.api}/x{self.comId}/s/item/{wikiId}/tipping/tipped-users-summary?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif chatId: response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/tipping/tipped-users-summary?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif fileId: response = self.session.get(f"{self.api}/x{self.comId}/s/shared-folder/files/{fileId}/tipping/tipped-users-summary?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         else: raise exceptions.SpecifyType()
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.TippedUsersSummary(json.loads(response.text)).TippedUsersSummary
@@ -1342,7 +1343,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread?type=joined-me&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread?type=joined-me&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.ThreadList(json.loads(response.text)["threadList"]).ThreadList
 
@@ -1359,7 +1360,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread?type=public-all&filterType={type}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread?type=public-all&filterType={type}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.ThreadList(json.loads(response.text)["threadList"]).ThreadList
 
@@ -1375,7 +1376,7 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.Thread(json.loads(response.text)["thread"]).Thread
 
@@ -1397,7 +1398,7 @@ class SubClient(client.Client):
         if pageToken is not None: url = f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/message?v=2&pagingType=t&pageToken={pageToken}&size={size}"
         else: url = f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/message?v=2&pagingType=t&size={size}"
 
-        response = self.session.get(url, headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(url, headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.GetMessages(json.loads(response.text)).GetMessages
 
@@ -1414,24 +1415,24 @@ class SubClient(client.Client):
 
             - **Fail** : :meth:`Exceptions <amino.lib.util.exceptions>`
         """
-        response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/message/{messageId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/message/{messageId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.Message(json.loads(response.text)["message"]).Message
 
     def get_blog_info(self, blogId: str = None, wikiId: str = None, quizId: str = None, fileId: str = None):
         if blogId or quizId:
             if quizId is not None: blogId = quizId
-            response = self.session.get(f"{self.api}/x{self.comId}/s/blog/{blogId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.get(f"{self.api}/x{self.comId}/s/blog/{blogId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
             if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
             else: return objects.GetBlogInfo(json.loads(response.text)).GetBlogInfo
 
         elif wikiId:
-            response = self.session.get(f"{self.api}/x{self.comId}/s/item/{wikiId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.get(f"{self.api}/x{self.comId}/s/item/{wikiId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
             if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
             else: return objects.GetWikiInfo(json.loads(response.text)).GetWikiInfo
 
         elif fileId:
-            response = self.session.get(f"{self.api}/x{self.comId}/s/shared-folder/files/{fileId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.get(f"{self.api}/x{self.comId}/s/shared-folder/files/{fileId}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
             if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
             else: return objects.SharedFolderFile(json.loads(response.text)["file"]).SharedFolderFile
 
@@ -1444,26 +1445,26 @@ class SubClient(client.Client):
 
         if blogId or quizId:
             if quizId is not None: blogId = quizId
-            response = self.session.get(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment?sort={sorting}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif wikiId: response = self.session.get(f"{self.api}/x{self.comId}/s/item/{wikiId}/comment?sort={sorting}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif fileId: response = self.session.get(f"{self.api}/x{self.comId}/s/shared-folder/files/{fileId}/comment?sort={sorting}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.get(f"{self.api}/x{self.comId}/s/blog/{blogId}/comment?sort={sorting}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif wikiId: response = self.session.get(f"{self.api}/x{self.comId}/s/item/{wikiId}/comment?sort={sorting}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif fileId: response = self.session.get(f"{self.api}/x{self.comId}/s/shared-folder/files/{fileId}/comment?sort={sorting}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         else: raise exceptions.SpecifyType()
 
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.CommentList(json.loads(response.text)["commentList"]).CommentList
 
     def get_blog_categories(self, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/blog-category?size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/blog-category?size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.BlogCategoryList(json.loads(response.text)["blogCategoryList"]).BlogCategoryList
 
     def get_blogs_by_category(self, categoryId: str, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/blog-category/{categoryId}/blog-list?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/blog-category/{categoryId}/blog-list?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.BlogList(json.loads(response.text)["blogList"]).BlogList
 
     def get_quiz_rankings(self, quizId: str, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/blog/{quizId}/quiz/result?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/blog/{quizId}/quiz/result?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.QuizRankings(json.loads(response.text)).QuizRankings
 
@@ -1488,7 +1489,7 @@ class SubClient(client.Client):
         elif sorting == "top": sorting = "vote"
         else: raise exceptions.WrongType(sorting)
 
-        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}/comment?sort={sorting}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile/{userId}/comment?sort={sorting}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.CommentList(json.loads(response.text)["commentList"]).CommentList
 
@@ -1501,12 +1502,12 @@ class SubClient(client.Client):
         else: return objects.RecentBlogs(json.loads(response.text)).RecentBlogs
 
     def get_chat_users(self, chatId: str, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member?start={start}&size={size}&type=default&cv=1.2", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/member?start={start}&size={size}&type=default&cv=1.2", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserProfileList(json.loads(response.text)["memberList"]).UserProfileList
 
     def get_notifications(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/notification?pagingType=t&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/notification?pagingType=t&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.NotificationList(json.loads(response.text)["notificationList"]).NotificationList
 
@@ -1517,23 +1518,23 @@ class SubClient(client.Client):
         :param size: Amount of Notices to Show
         :return: Notices List
         """
-        response = self.session.get(f"{self.api}/x{self.comId}/s/notice?type=usersV2&status=1&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/notice?type=usersV2&status=1&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return json.loads(response.text)["noticeList"]
 
     def get_sticker_pack_info(self, sticker_pack_id: str):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/sticker-collection/{sticker_pack_id}?includeStickers=true", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/sticker-collection/{sticker_pack_id}?includeStickers=true", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.StickerCollection(json.loads(response.text)["stickerCollection"]).StickerCollection
 
     def get_sticker_packs(self):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/sticker-collection?includeStickers=false&type=my-active-collection", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/sticker-collection?includeStickers=false&type=my-active-collection", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         return objects.StickerCollection(json.loads(response.text)["stickerCollection"]).StickerCollection
 
     # TODO : Finish this
     def get_store_chat_bubbles(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/store/items?sectionGroupId=chat-bubble&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/store/items?sectionGroupId=chat-bubble&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else:
             response = json.loads(response.text)
@@ -1542,7 +1543,7 @@ class SubClient(client.Client):
 
     # TODO : Finish this
     def get_store_stickers(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/store/items?sectionGroupId=sticker&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/store/items?sectionGroupId=sticker&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else:
             response = json.loads(response.text)
@@ -1550,22 +1551,22 @@ class SubClient(client.Client):
             return response
 
     def get_community_stickers(self):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/sticker-collection?type=community-shared", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/sticker-collection?type=community-shared", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.CommunityStickerCollection(json.loads(response.text)).CommunityStickerCollection
 
     def get_sticker_collection(self, collectionId: str):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/sticker-collection/{collectionId}?includeStickers=true", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/sticker-collection/{collectionId}?includeStickers=true", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.StickerCollection(json.loads(response.text)["stickerCollection"]).StickerCollection
 
     def get_shared_folder_info(self):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/shared-folder/stats", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/shared-folder/stats", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.GetSharedFolderInfo(json.loads(response.text)["stats"]).GetSharedFolderInfo
 
     def get_shared_folder_files(self, type: str = "latest", start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/shared-folder/files?type={type}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/shared-folder/files?type={type}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.SharedFolderFileList(json.loads(response.text)["fileList"]).SharedFolderFileList
 
@@ -1574,12 +1575,12 @@ class SubClient(client.Client):
     #
 
     def moderation_history(self, userId: str = None, blogId: str = None, wikiId: str = None, quizId: str = None, fileId: str = None, size: int = 25):
-        if userId: response = self.session.get(f"{self.api}/x{self.comId}/s/admin/operation?objectId={userId}&objectType=0&pagingType=t&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif blogId: response = self.session.get(f"{self.api}/x{self.comId}/s/admin/operation?objectId={blogId}&objectType=1&pagingType=t&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif quizId: response = self.session.get(f"{self.api}/x{self.comId}/s/admin/operation?objectId={quizId}&objectType=1&pagingType=t&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif wikiId: response = self.session.get(f"{self.api}/x{self.comId}/s/admin/operation?objectId={wikiId}&objectType=2&pagingType=t&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        elif fileId: response = self.session.get(f"{self.api}/x{self.comId}/s/admin/operation?objectId={fileId}&objectType=109&pagingType=t&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
-        else: response = self.session.get(f"{self.api}/x{self.comId}/s/admin/operation?pagingType=t&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        if userId: response = self.session.get(f"{self.api}/x{self.comId}/s/admin/operation?objectId={userId}&objectType=0&pagingType=t&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif blogId: response = self.session.get(f"{self.api}/x{self.comId}/s/admin/operation?objectId={blogId}&objectType=1&pagingType=t&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif quizId: response = self.session.get(f"{self.api}/x{self.comId}/s/admin/operation?objectId={quizId}&objectType=1&pagingType=t&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif wikiId: response = self.session.get(f"{self.api}/x{self.comId}/s/admin/operation?objectId={wikiId}&objectType=2&pagingType=t&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        elif fileId: response = self.session.get(f"{self.api}/x{self.comId}/s/admin/operation?objectId={fileId}&objectType=109&pagingType=t&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
+        else: response = self.session.get(f"{self.api}/x{self.comId}/s/admin/operation?pagingType=t&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.AdminLogList(json.loads(response.text)["adminLogList"]).AdminLogList
 
@@ -1606,22 +1607,22 @@ class SubClient(client.Client):
         if userId:
             data["adminOpValue"] = {"featuredType": 4}
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif blogId:
             data["adminOpValue"] = {"featuredType": 1}
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif wikiId:
             data["adminOpValue"] = {"featuredType": 1}
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/item/{wikiId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/item/{wikiId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif chatId:
             data["adminOpValue"] = {"featuredType": 5}
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         else: raise exceptions.SpecifyType()
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
@@ -1637,22 +1638,22 @@ class SubClient(client.Client):
         if userId:
             data["adminOpValue"] = {"featuredType": 0}
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif blogId:
             data["adminOpValue"] = {"featuredType": 0}
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif wikiId:
             data["adminOpValue"] = {"featuredType": 0}
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/item/{wikiId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/item/{wikiId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif chatId:
             data["adminOpValue"] = {"featuredType": 0}
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         else: raise exceptions.SpecifyType()
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
@@ -1669,37 +1670,37 @@ class SubClient(client.Client):
         if userId:
             data["adminOpName"] = 18
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif blogId:
             data["adminOpName"] = 110
             data["adminOpValue"] = 9
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif quizId:
             data["adminOpName"] = 110
             data["adminOpValue"] = 9
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{quizId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{quizId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif wikiId:
             data["adminOpName"] = 110
             data["adminOpValue"] = 9
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/item/{wikiId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/item/{wikiId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif chatId:
             data["adminOpName"] = 110
             data["adminOpValue"] = 9
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif fileId:
             data["adminOpName"] = 110
             data["adminOpValue"] = 9
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/shared-folder/files/{fileId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/shared-folder/files/{fileId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         else: raise exceptions.SpecifyType()
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
@@ -1716,37 +1717,37 @@ class SubClient(client.Client):
         if userId:
             data["adminOpName"] = 19
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif blogId:
             data["adminOpName"] = 110
             data["adminOpValue"] = 0
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif quizId:
             data["adminOpName"] = 110
             data["adminOpValue"] = 0
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{quizId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{quizId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif wikiId:
             data["adminOpName"] = 110
             data["adminOpValue"] = 0
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/item/{wikiId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/item/{wikiId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif chatId:
             data["adminOpName"] = 110
             data["adminOpValue"] = 0
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         elif fileId:
             data["adminOpName"] = 110
             data["adminOpValue"] = 0
             data = json.dumps(data)
-            response = self.session.post(f"{self.api}/x{self.comId}/s/shared-folder/files/{fileId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+            response = self.session.post(f"{self.api}/x{self.comId}/s/shared-folder/files/{fileId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
 
         else: raise exceptions.SpecifyType()
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
@@ -1765,7 +1766,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/admin", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return json.loads(response.text)
 
@@ -1785,7 +1786,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/notice", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/notice", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return json.loads(response.text)
 
@@ -1813,7 +1814,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/notice", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/notice", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return json.loads(response.text)
 
@@ -1826,7 +1827,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/ban", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/ban", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return json.loads(response.text)
 
@@ -1838,7 +1839,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/unban", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/{userId}/unban", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return json.loads(response.text)
 
@@ -1848,37 +1849,37 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/featured/reorder", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/user-profile/featured/reorder", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return json.loads(response.text)
 
     def get_hidden_blogs(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/feed/blog-disabled?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/feed/blog-disabled?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.BlogList(json.loads(response.text)["blogList"]).BlogList
 
     def get_featured_users(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=featured&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/user-profile?type=featured&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserProfileCountList(json.loads(response.text)).UserProfileCountList
 
     def review_quiz_questions(self, quizId: str):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/blog/{quizId}?action=review", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/blog/{quizId}?action=review", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.QuizQuestionList(json.loads(response.text)["blog"]["quizQuestionList"]).QuizQuestionList
 
     def get_recent_quiz(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/blog?type=quizzes-recent&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/blog?type=quizzes-recent&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.BlogList(json.loads(response.text)["blogList"]).BlogList
 
     def get_trending_quiz(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/feed/quiz-trending?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/feed/quiz-trending?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.BlogList(json.loads(response.text)["blogList"]).BlogList
 
     def get_best_quiz(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/feed/quiz-best-quizzes?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/feed/quiz-best-quizzes?start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.BlogList(json.loads(response.text)["blogList"]).BlogList
 
@@ -1918,7 +1919,7 @@ class SubClient(client.Client):
         else: data['paymentContext'] = {'discountStatus': 0, 'discountValue': 1, 'isAutoRenew': autoRenew}
 
         data = json.dumps(data)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/store/purchase", headers=self.parse_headers(data=data), data=data)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/store/purchase", headers=self.parse_headers(data=data), data=data, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -1945,7 +1946,7 @@ class SubClient(client.Client):
         if applyToAll: data["applyToAll"] = 1
 
         data = json.dumps(data)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/avatar-frame/apply", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/avatar-frame/apply", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -1967,7 +1968,7 @@ class SubClient(client.Client):
             "uid": userId
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/vvchat-presenter/invite/", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/{chatId}/vvchat-presenter/invite/", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -1979,7 +1980,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/poll/option", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/blog/{blogId}/poll/option", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -1993,7 +1994,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/item-category", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/item-category", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -2002,7 +2003,7 @@ class SubClient(client.Client):
                 "title": title,
                 "timestamp": int(timestamp() * 1000)
             })
-        response = self.session.post(f"{self.api}/x{self.comId}/s/shared-folder/folders", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/shared-folder/folders", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -2013,7 +2014,7 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/knowledge-base-request", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/knowledge-base-request", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
@@ -2024,24 +2025,24 @@ class SubClient(client.Client):
             "timestamp": int(timestamp() * 1000)
         })
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/knowledge-base-request/{requestId}/approve", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/knowledge-base-request/{requestId}/approve", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def reject_wiki_request(self, requestId: str):
         data = json.dumps({})
 
-        response = self.session.post(f"{self.api}/x{self.comId}/s/knowledge-base-request/{requestId}/reject", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/knowledge-base-request/{requestId}/reject", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def get_wiki_submissions(self, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/knowledge-base-request?type=all&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/knowledge-base-request?type=all&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.WikiRequestList(json.loads(response.text)["knowledgeBaseRequestList"]).WikiRequestList
 
     def get_live_layer(self):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/live-layer/homepage?v=2", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/live-layer/homepage?v=2", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.LiveLayer(json.loads(response.text)["liveLayerList"]).LiveLayer
 
@@ -2057,11 +2058,11 @@ class SubClient(client.Client):
             data["applyToAll"] = 1
 
         data = json.dumps(data)
-        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/apply-bubble", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.post(f"{self.api}/x{self.comId}/s/chat/thread/apply-bubble", headers=self.parse_headers(data=data), data=data, proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return response.status_code
 
     def get_blog_users(self, blogId: str, start: int = 0, size: int = 25):
-        response = self.session.get(f"{self.api}/x{self.comId}/s/live-layer?topic=ndtopic%3Ax{self.comId}%3Ausers-browsing-blog-at%3A{blogId}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath)
+        response = self.session.get(f"{self.api}/x{self.comId}/s/live-layer?topic=ndtopic%3Ax{self.comId}%3Ausers-browsing-blog-at%3A{blogId}&start={start}&size={size}", headers=self.parse_headers(), proxies=self.proxies, verify=self.certificatePath, timeout=self.requestTimeOut)
         if response.status_code != 200: return exceptions.CheckException(json.loads(response.text))
         else: return objects.UserProfileCountList(json.loads(response.text)).UserProfileCountList
